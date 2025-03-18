@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/lerna/schemas/lerna-schema.json",
+  "npmClient": "npm",
+  "version": "0.0.0",
+  "command": {
+    "run": {
+      "stream": true,
+      "sort": true
+    }
+  }
+}

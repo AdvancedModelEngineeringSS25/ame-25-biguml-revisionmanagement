@@ -1,0 +1,49 @@
+{
+  // Use IntelliSense to learn about possible Node.js debug attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "(Debug) UML GLSP VSCode Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "${workspaceFolder}/workspace",
+        "--extensionDevelopmentPath=${workspaceFolder}/application/vscode"
+      ],
+      "sourceMaps": true,
+      "smartStep": true,
+      "outFiles": [
+        "${workspaceFolder}/node_modules/eclipse-glsp/**/*.js",
+        "${workspaceFolder}/application/**/*.js",
+        "${workspaceFolder}/packages/**/*.js"
+      ],
+      "env": {
+        "UML_GLSP_SERVER_DEBUG": "true",
+        "UML_GLSP_SERVER_PORT": "5007",
+        "UML_GLSP_SERVER_LOGGING": "true"
+      }
+    },
+    {
+      "name": "(Production) UML GLSP VSCode Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "${workspaceFolder}/workspace",
+        "--extensionDevelopmentPath=${workspaceFolder}/application/vscode"
+      ],
+      "sourceMaps": true,
+      "smartStep": true,
+      "outFiles": ["${workspaceFolder}/application/**/*.js", "${workspaceFolder}/packages/**/*.js"],
+      "env": {
+        "UML_GLSP_SERVER_DEBUG": "false",
+        "UML_GLSP_SERVER_LOGGING": "false",
+        "UML_MODEL_SERVER_DEBUG": "false",
+        "UML_MODEL_SERVER_LOGGING": "false"
+      }
+    }
+  ]
+}
