@@ -8,18 +8,19 @@
  **********************************************************************************/
 import { BIGReactWebview } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { inject, injectable, postConstruct } from 'inversify';
-import { RequestRevisionManagementAction, RevisionManagementResponse } from '../common/revision-management.action.js';
+import * as vscode from 'vscode';
+import { FileSaveResponse } from '../common/file-save.action.js';
 
 export const RevisionManagementId = Symbol('RevisionmanagementViewId');
 
 @injectable()
-export class RevisionManagementProvider extends BIGReactWebview {
+export class FileSaveProvider extends BIGReactWebview {
     @inject(RevisionManagementId)
     viewId: string;
 
     protected override cssPath = ['revision-management', 'bundle.css'];
     protected override jsPath = ['revision-management', 'bundle.js'];
-    protected readonly actionCache = this.actionListener.createCache([RevisionManagementResponse.KIND]);
+    protected readonly actionCache = this.actionListener.createCache([FileSaveResponse.KIND]);
 
     @postConstruct()
     protected override init(): void {
@@ -31,34 +32,38 @@ export class RevisionManagementProvider extends BIGReactWebview {
     protected override handleConnection(): void {
         super.handleConnection();
 
+        vscode.workspace.onDidSaveTextDocument(doc => {
+            console.log('File saved:', doc.fileName);
+        });
+
         this.toDispose.push(
             this.actionCache.onDidChange(message => this.webviewConnector.dispatch(message)),
             this.webviewConnector.onReady(() => {
-                this.requestCount();
+                this.timeline();
                 this.webviewConnector.dispatch(this.actionCache.getActions());
             }),
             this.webviewConnector.onVisible(() => this.webviewConnector.dispatch(this.actionCache.getActions())),
             this.connectionManager.onDidActiveClientChange(() => {
-                this.requestCount();
+                this.timeline();
             }),
             this.connectionManager.onNoActiveClient(() => {
                 // Send a message to the webview when there is no active client
-                this.webviewConnector.dispatch(RevisionManagementResponse.create());
+                this.webviewConnector.dispatch(FileSaveResponse.create());
             }),
             this.connectionManager.onNoConnection(() => {
                 // Send a message to the webview when there is no glsp client
-                this.webviewConnector.dispatch(RevisionManagementResponse.create());
+                this.webviewConnector.dispatch(FileSaveResponse.create());
             }),
             this.modelState.onDidChangeModelState(() => {
-                this.requestCount();
+                this.timeline();
             })
         );
     }
 
-    protected requestCount(): void {
+    protected timeline(): void {
         this.actionDispatcher.dispatch(
-            RequestRevisionManagementAction.create({
-                savedFile: ''
+            FileSaveResponse.create({
+                timeline: []
             })
         );
     }

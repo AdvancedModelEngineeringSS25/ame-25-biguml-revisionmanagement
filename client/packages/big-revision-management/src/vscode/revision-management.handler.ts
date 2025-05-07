@@ -17,7 +17,7 @@ import {
 } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { DisposableCollection } from '@eclipse-glsp/protocol';
 import { inject, injectable, postConstruct } from 'inversify';
-import { RevisionManagementResponse, RequestRevisionManagementAction } from '../common/revision-management.action.js';
+import { RequestRevisionManagementAction, RevisionManagementResponse } from '../common/revision-management.action.js';
 
 // Handle the action within the server and not the glsp client / server
 @injectable()
@@ -30,16 +30,17 @@ export class RevisionManagementHandler implements Disposable {
     protected readonly modelState: ExperimentalGLSPServerModelState;
 
     private readonly toDispose = new DisposableCollection();
-    private count = 0;
+    private timeline: string[] = [];
+
 
     @postConstruct()
     protected init(): void {
         this.toDispose.push(
             this.actionListener.handleVSCodeRequest<RequestRevisionManagementAction>(RequestRevisionManagementAction.KIND, async message => {
-                this.count += message.action.increase;
-                console.log(`Revision Management from VS Code: ${this.count}`);
+                this.timeline.push(message.action.savedFile);
+                console.log(`Hello World from the GLSP Client for Revision Management: ${this.timeline}`);
                 return RevisionManagementResponse.create({
-                    count: this.count
+                    timeline: this.timeline
                 });
             })
         );

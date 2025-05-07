@@ -13,7 +13,7 @@ import { Action, RequestAction, type ResponseAction } from '@eclipse-glsp/protoc
 
 export interface RequestRevisionManagementAction extends RequestAction<RevisionManagementResponse> {
     kind: typeof RequestRevisionManagementAction.KIND;
-    increase: number;
+    savedFile: string;
 }
 
 export namespace RequestRevisionManagementAction {
@@ -34,7 +34,7 @@ export namespace RequestRevisionManagementAction {
 
 export interface RevisionManagementResponse extends ResponseAction {
     kind: typeof RevisionManagementResponse.KIND;
-    count: number;
+    timeline: string[];
 }
 export namespace RevisionManagementResponse {
     export const KIND = 'revisionManagementResponse';
@@ -49,7 +49,7 @@ export namespace RevisionManagementResponse {
         return {
             kind: KIND,
             responseId: '',
-            count: 0,
+            timeline: [],
             ...options
         };
     }

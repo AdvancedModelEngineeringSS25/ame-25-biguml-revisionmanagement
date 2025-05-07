@@ -6,12 +6,19 @@
  *
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
+import * as vscode from 'vscode';
 
-div {
-    display: flex;
-    flex-direction: column;
-}
+export function watchCurrentSave() {
+    console.log('Watching for file save...');
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    return;
+  }
+  const target = editor.document;
 
-.timeline-item:hover {
-    background-color: var(--vscode-list-hoverBackground);
+  vscode.workspace.onDidSaveTextDocument(doc => {
+    if (doc === target) {
+      console.log('File saved:', doc.fileName);
+    }
+  });
 }

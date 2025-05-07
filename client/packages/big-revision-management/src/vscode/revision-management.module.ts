@@ -9,13 +9,18 @@
 
 import { TYPES } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { ContainerModule } from 'inversify';
-import { RevisionManagementProvider, RevisionManagementId } from './revision-management.provider.js';
+import { FileSaveProvider } from './file-save.provider.js';
+import { RevisionManagementId, RevisionManagementProvider } from './revision-management.provider.js';
 
 export function revisionManagementModule(viewId: string) {
     return new ContainerModule(bind => {
         bind(RevisionManagementId).toConstantValue(viewId);
         bind(RevisionManagementProvider).toSelf().inSingletonScope();
         bind(TYPES.RootInitialization).toService(RevisionManagementProvider);
+        
+        
+        bind(FileSaveProvider).toSelf().inSingletonScope();
+        bind(TYPES.RootInitialization).toService(FileSaveProvider);
 
         // Handle the request vscode side
         // This will prevent the glsp to handle the request

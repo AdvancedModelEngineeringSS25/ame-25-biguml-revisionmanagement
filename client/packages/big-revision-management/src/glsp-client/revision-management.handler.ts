@@ -9,18 +9,17 @@
 
 import type { Action, IActionHandler, ICommand } from '@eclipse-glsp/client';
 import { injectable } from 'inversify';
-import { RevisionManagementResponse, RequestRevisionManagementAction } from '../common/revision-management.action.js';
+import { RequestRevisionManagementAction, RevisionManagementResponse } from '../common/revision-management.action.js';
 
 @injectable()
 export class RevisionManagementHandler implements IActionHandler {
-    private count = 0;
+    private timeline: string[] = [];
 
     handle(action: Action): ICommand | Action | void {
         if (RequestRevisionManagementAction.is(action)) {
-            this.count += action.increase;
-            console.log(`Revision Management from the GLSP Client: ${this.count}`);
+            this.timeline.push(action.savedFile);
             return RevisionManagementResponse.create({
-                count: this.count
+                timeline: this.timeline
             });
         }
     }

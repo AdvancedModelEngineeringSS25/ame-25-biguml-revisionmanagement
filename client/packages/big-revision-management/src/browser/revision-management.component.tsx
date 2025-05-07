@@ -7,35 +7,45 @@
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
 import { VSCodeContext } from '@borkdominik-biguml/big-components';
-import { useCallback, useContext, useEffect, useState, type ReactElement } from 'react';
-import { RevisionManagementResponse, RequestRevisionManagementAction } from '../common/index.js';
+import { useContext, useEffect, useState } from 'react';
+import { RevisionManagementResponse } from '../common/index.js';
 
-
-export function RevisionManagement(): ReactElement {
-    const { listenAction, dispatchAction } = useContext(VSCodeContext);
-    const [count, setCount] = useState(0);
+export function RevisionManagement(): React.ReactElement {
+    const { listenAction } = useContext(VSCodeContext);
+    const [timeline, setTimeline] = useState(["File saved", "File saved"]);
 
     useEffect(() => {
         listenAction(action => {
             if (RevisionManagementResponse.is(action)) {
-                setCount(action.count);
+                setTimeline(action.timeline);
             }
         });
     }, [listenAction]);
 
-    const increase1 = useCallback(() => {
-        dispatchAction(RequestRevisionManagementAction.create({ increase: 1 }));
-    }, [dispatchAction]);
-
-    const increase5 = useCallback(() => {
-        dispatchAction(RequestRevisionManagementAction.create({ increase: 5 }));
-    }, [dispatchAction]);
-
     return (
         <div>
-            <span>Revision Management {count}</span>
-            <button onClick={() => increase1()}>Increase 1</button>
-            <button onClick={() => increase5()}>Increase 5</button>
+            <div style={{ width: '100%', fontSize: '1em' }}>
+                {timeline.map((item, index) => (
+                    <div
+                        className="timeline-item"
+                        key={index}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            padding: '3px 6px',
+                            borderBottom: index < timeline.length - 1 ? '1px solid #333' : 'none',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <span style={{ whiteSpace: 'nowrap' }}>{item}</span>
+
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
