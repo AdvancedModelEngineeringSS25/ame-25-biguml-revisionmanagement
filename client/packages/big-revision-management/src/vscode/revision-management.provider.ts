@@ -6,14 +6,15 @@
  *
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
+import type { BIGWebviewProviderContext } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { BIGReactWebview, type ExperimentalModelState } from '@borkdominik-biguml/big-vscode-integration/vscode';
 import { inject, injectable, postConstruct } from 'inversify';
+import path from 'path';
 import * as vscode from 'vscode';
 import { FileSaveResponse } from '../common/file-save-action.js';
 import { type Snapshot } from '../common/snapshot.js';
 
 export const RevisionManagementId = Symbol('RevisionmanagementViewId');
-import type { BIGWebviewProviderContext } from '@borkdominik-biguml/big-vscode-integration/vscode';
 
 
 @injectable()
@@ -123,37 +124,12 @@ export class RevisionManagementProvider extends BIGReactWebview {
         }));
     }
 
-    private matchesUri(uri1: string, uri2: string): boolean {
-        const normalizedUri1 = this.normalizeUri(uri1);
-        const normalizedUri2 = this.normalizeUri(uri2);
+    private matchesUri(vsCodeUri: string, pathUri: string): boolean {
+        const uri1 = vscode.Uri.parse(vsCodeUri).fsPath;
+        const uri2 = path.resolve(pathUri);
 
-        return normalizedUri1 === normalizedUri2;
+        return uri1 === uri2;
     }
-
-    private normalizeUri(uri: string): string {
-        // 1. Remove file:// prefix if present
-        let p = uri.replace(/^file:\/+/, '');
-
-        // 2. Replace backslashes (for Windows) with slashes
-        p = p.replace(/\\/g, '/');
-
-        // 3. Collapse multiple slashes
-        p = p.replace(/\/{2,}/g, '/');
-
-        // 4. Platform-specific adjustments
-        if (process.platform === 'win32') {
-            // a. Drop leading slash before drive letter: "/C:/foo" → "C:/foo"
-            p = p.replace(/^\/([a-zA-Z]:)/, '$1');
-
-            // b. Lowercase drive letter: "C:/Users" → "c:/Users"
-            p = p.replace(/^([A-Z]):/, (_, d) => d.toLowerCase() + ':');
-        }
-
-        // 5. Re-add "file:///" for Windows, "file://" for Linux/macOS
-        const prefix = process.platform === 'win32' ? 'file:///' : 'file://';
-        return prefix + p;
-    }
-
     
     protected getCssUri(webview: vscode.Webview, ...path: string[]): vscode.Uri {
         return webview.asWebviewUri(vscode.Uri.joinPath(this.extensionContext.extensionUri, 'webviews', ...path));
