@@ -7,40 +7,28 @@
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
 
-import { ReactElement, useState } from 'react';
-
-interface Snapshot {
-    id: string;
-    timestamp: string;
-    author: string;
-    message: string;
-    svg: string;
-}
-
-const mockSnapshots: Snapshot[] = [
-    {
-        id: 'rev-001',
-        timestamp: new Date().toISOString(),
-        author: 'Alice',
-        message: 'Initial model setup',
-        svg: '<g><circle cx="50" cy="50" r="40" stroke="black" fill="lightgray" /></g>'
-    },
-    {
-        id: 'rev-002',
-        timestamp: new Date().toISOString(),
-        author: 'Bob',
-        message: 'Added new class diagram',
-        svg: '<g><rect x="20" y="20" width="100" height="50" stroke="blue" fill="lightblue" /></g>'
-    }
-];
+import { VSCodeContext } from '@borkdominik-biguml/big-components';
+import { useContext, useEffect, useState, type ReactElement } from 'react';
+import { FileSaveResponse } from '../common/file-save-action.js';
+import { type Snapshot } from '../common/snapshot.js';
 
 export function RevisionManagement(): ReactElement {
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [timeline, setTimeline] = useState<Snapshot[]>([]);
+
+    const { listenAction } = useContext(VSCodeContext);
+    useEffect(() => {
+        listenAction(action => {
+            if (FileSaveResponse.is(action)) {
+                setTimeline(action.timeline);
+            }
+        });
+    }, [listenAction]);
 
     return (
         <div style={{ padding: '0.25rem 0.5rem', fontFamily: 'var(--vscode-font-family)', color: 'var(--vscode-editor-foreground)' }}>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {mockSnapshots.map((snapshot) => {
+                {timeline.map((snapshot) => {
                     const isExpanded = expandedId === snapshot.id;
 
                     return (
