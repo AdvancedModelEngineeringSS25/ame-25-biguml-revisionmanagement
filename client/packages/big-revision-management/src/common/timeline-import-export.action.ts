@@ -7,5 +7,15 @@
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
 
-export * from './file-save-action.js';
+// timeline-import-export.messages.ts
+
+export interface TimelineImportExportPayload {
+    action: 'import' | 'export';
+}
+
+export const TimelineImportExportNotification = {
+    method: 'timeline/importExport'
+};
+
+
 
