@@ -1,9 +1,6 @@
 /**********************************************************************************
  * Copyright (c) 2025 borkdominik and others.
  *
- * This program and the accompanying materials are made available under the
- * terms of the MIT License which is available at https://opensource.org/licenses/MIT.
- *
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
 import type { ReactElement } from 'react';
@@ -25,7 +22,6 @@ export function RevisionManagement(): ReactElement {
 
     const { listenAction } = useContext(VSCodeContext);
 
-    // Listen to VSCode file save responses
     useEffect(() => {
         listenAction(action => {
             if (FileSaveResponse.is(action)) {
@@ -34,16 +30,11 @@ export function RevisionManagement(): ReactElement {
         });
     }, [listenAction]);
 
-    // Listen to window messages for modal triggers
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             const { data } = event;
-            console.log('[Webview] Received message:', data);
-            if (data?.action === 'import') {
-                setShowImportModal(true);
-            } else if (data?.action === 'export') {
-                setShowExportModal(true);
-            }
+            if (data?.action === 'import') setShowImportModal(true);
+            else if (data?.action === 'export') setShowExportModal(true);
         };
 
         window.addEventListener('message', handleMessage);
@@ -60,7 +51,17 @@ export function RevisionManagement(): ReactElement {
                         setSelectedSnapshot(snapshot);
                         setShowRestoreModal(true);
                     };
-                    
+
+                    let viewBox = '0 0 800 600';
+                    try {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(snapshot.svg, 'image/svg+xml');
+                        const rawViewBox = doc.documentElement?.getAttribute('viewBox');
+                        if (rawViewBox) viewBox = rawViewBox;
+                    } catch {
+                        console.warn('Failed to parse SVG viewBox.');
+                    }
+
                     return (
                         <li
                             key={snapshot.id}
@@ -87,18 +88,24 @@ export function RevisionManagement(): ReactElement {
                             </div>
                             {isExpanded && (
                                 <div style={{ marginTop: '0.4rem' }}>
-                                    <svg
-                                        width="200"
-                                        height="200"
-                                        viewBox="0 0 200 200"
-                                        style={{
-                                            border: '1px solid var(--vscode-editorWidget-border)',
-                                            backgroundColor: 'white',
-                                            display: 'block'
-                                        }}
-                                    >
-                                        <g dangerouslySetInnerHTML={{ __html: snapshot.svg }} />
-                                    </svg>
+                                    <div style={{
+                                        width: '100%',
+                                        aspectRatio: '4 / 3',
+                                        backgroundColor: 'var(--vscode-editor-background)',
+                                        border: '1px solid var(--vscode-editorWidget-border)',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        overflow: 'hidden'
+                                    }}>
+                                        <svg
+                                            width="100%"
+                                            height="100%"
+                                            preserveAspectRatio="xMidYMid meet"
+                                            viewBox={viewBox}
+                                            dangerouslySetInnerHTML={{ __html: snapshot.svg }}
+                                        />
+                                    </div>
 
                                     <div style={buttonRowStyle}>
                                         <button onClick={() => handleRestore(snapshot)} style={cancelButtonStyle}>
@@ -120,7 +127,7 @@ export function RevisionManagement(): ReactElement {
                     onClose={() => setShowImportModal(false)}
                     onImport={(file) => {
                         console.log('Imported file:', file.name);
-                        // TODO: add logic for importing timeline from file
+                        // TODO: handle import
                     }}
                 />
             )}
@@ -128,24 +135,22 @@ export function RevisionManagement(): ReactElement {
                 <ExportTimelineModal onClose={() => setShowExportModal(false)} onExport={() => { /* ... */ }} />
             )}
             {showRestoreModal && selectedSnapshot && (
-            <ConfirmRestoreModal
-                onCancel={() => {
-                    setShowRestoreModal(false);
-                    setSelectedSnapshot(null);
-                }}
-                onConfirm={() => {
-                    console.log('[Confirmed Restore] Snapshot:', selectedSnapshot.id);
-                    setShowRestoreModal(false);
-                    setSelectedSnapshot(null);
-                    // TODO: Trigger real restore logic here
-                }}
-            />
-        )}
-
+                <ConfirmRestoreModal
+                    onCancel={() => {
+                        setShowRestoreModal(false);
+                        setSelectedSnapshot(null);
+                    }}
+                    onConfirm={() => {
+                        console.log('[Confirmed Restore] Snapshot:', selectedSnapshot.id);
+                        setShowRestoreModal(false);
+                        setSelectedSnapshot(null);
+                        // TODO: handle restore logic
+                    }}
+                />
+            )}
         </div>
     );
 }
-
 
 const handleExportSnapshot = (snapshot: Snapshot) => {
     const blob = new Blob([snapshot.svg], { type: 'image/svg+xml' });
@@ -157,11 +162,10 @@ const handleExportSnapshot = (snapshot: Snapshot) => {
     URL.revokeObjectURL(url);
 };
 
-
 const buttonRowStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'row',              
-    justifyContent: 'flex-end',       
+    justifyContent: 'flex-end',
     alignItems: 'center',
     gap: '0.4rem',
     borderTop: '1px solid var(--vscode-panel-border)',
@@ -169,18 +173,19 @@ const buttonRowStyle: React.CSSProperties = {
     marginTop: '1rem'
 };
 
+
 const buttonBaseStyle: React.CSSProperties = {
-    fontSize: '13px',                         
-    padding: '0.35rem 1.1rem',              
+    fontSize: '13px',
+    padding: '0.35rem 1.1rem',
     borderRadius: '3px',
     cursor: 'pointer',
-    minWidth: 'auto',
-    display: 'inline-block',
-    height: 'auto',
+    minWidth: '100px',        // ensures buttons don’t collapse too much
+    flexGrow: 1,              // allows buttons to take equal space in row
     textAlign: 'center',
     whiteSpace: 'nowrap',
     lineHeight: '1.4'
 };
+
 
 const cancelButtonStyle: React.CSSProperties = {
     ...buttonBaseStyle,
