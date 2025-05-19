@@ -6,13 +6,17 @@
  *
  * SPDX-License-Identifier: MIT
  **********************************************************************************/
-import type { BIGWebviewProviderContext } from '@borkdominik-biguml/big-vscode-integration/vscode';
-import { BIGReactWebview, type ExperimentalModelState } from '@borkdominik-biguml/big-vscode-integration/vscode';
+import { MinimapExportSvgAction, RequestMinimapExportSvgAction } from '@borkdominik-biguml/big-minimap';
+import type { BIGGLSPVSCodeConnector, BIGWebviewProviderContext } from '@borkdominik-biguml/big-vscode-integration/vscode';
+import { BIGReactWebview, TYPES, type ExperimentalModelState } from '@borkdominik-biguml/big-vscode-integration/vscode';
+import { RequestExportSvgAction } from '@eclipse-glsp/protocol';
 import { inject, injectable, postConstruct } from 'inversify';
 import path from 'path';
 import * as vscode from 'vscode';
-import { FileSaveResponse } from '../common/file-save-action.js';
+import { RequestExportSnapshotAction } from '../common/actions/request-export-snapshot-action.js';
+import { FileSaveResponse } from '../common/actions/file-save-action.js';
 import { type Snapshot } from '../common/snapshot.js';
+
 
 export const RevisionManagementId = Symbol('RevisionmanagementViewId');
 
@@ -22,12 +26,18 @@ export class RevisionManagementProvider extends BIGReactWebview {
     @inject(RevisionManagementId)
     viewId: string;
 
+    @inject(TYPES.GLSPVSCodeConnector)
+    protected readonly connector!: BIGGLSPVSCodeConnector;
+
+
     protected override cssPath = ['revision-management', 'bundle.css'];
     protected override jsPath = ['revision-management', 'bundle.js'];
     protected readonly actionCache = this.actionListener.createCache([
         FileSaveResponse.KIND
     ]);
 
+
+    private lastSnapshotTime = 0;
     private currentModelState: ExperimentalModelState | null = null;
     private timeline: Snapshot[] = [];
 
@@ -38,31 +48,78 @@ export class RevisionManagementProvider extends BIGReactWebview {
 
         const umlWatcher = vscode.workspace.createFileSystemWatcher('**/*.uml');
 
+    
         this.toDispose.push(
             umlWatcher.onDidChange(uri => {
                 console.log('[fswatcher] File changed (saved):', uri.fsPath);
-                const affectedResource = this.currentModelState?.getResources().find(resource => this.matchesUri(resource.uri, uri.fsPath));
+
+                const affectedResource = this.currentModelState?.getResources().find(resource =>
+                    this.matchesUri(resource.uri, uri.fsPath)
+                );
+
                 if (affectedResource && this.currentModelState) {
-                    this.timeline.push({
-                        id: this.timeline.length.toString(),
-                        timestamp: new Date().toISOString(),
-                        author: "User", // todo not necessary
-                        message: "File saved", 
-                        svg: "", // todo add svg
-                        state: this.currentModelState
-                    });
-                    this.updateTimeline();
-                }               
+                    if (!this.connectionManager.hasActiveClient()) {
+                        console.warn('[Snapshot] No active GLSP client available');
+                        return;
+                    }
+
+                    console.log('[Snapshot] Triggering exportSvg via RequestMinimapExportSvgAction');
+                    this.connector.sendActionToActiveClient(RequestMinimapExportSvgAction.create());
+
+                }
             }),
 
             umlWatcher.onDidCreate(uri => {
                 console.log('[fswatcher] File created:', uri.fsPath);
-                // todo: maybe handle file creation
+                // Optional: handle creation logic
             }),
+            
 
             umlWatcher
         );
-        
+
+       this.toDispose.push(
+            this.connector.onClientActionMessage(message => {
+                if (MinimapExportSvgAction.is(message.action)) {
+                    const { svg = '', bounds } = message.action;
+
+                    const now = Date.now();
+                    if (now - this.lastSnapshotTime < 1000) {
+                        console.log('[Snapshot] Too soon since last snapshot — skipping.');
+                        return;
+                    }
+                    this.lastSnapshotTime = now;
+
+                    if (this.timeline.length > 0 && this.timeline[this.timeline.length - 1].svg === svg) {
+                        console.log('[Snapshot] Duplicate SVG detected — skipping.');
+                        return;
+                    }
+
+                    console.log('[Snapshot] Received SVG from Minimap Export. Length:', svg.length);
+                    this.timeline.push({
+                        id: this.timeline.length.toString(),
+                        timestamp: new Date().toISOString(),
+                        author: 'User',
+                        message: 'File saved',
+                        svg,
+                        bounds,
+                        state: this.currentModelState!
+                    });
+
+                    this.updateTimeline();
+                }
+            })
+        );
+
+        // Handle ExportSnapshot action triggered by webview button
+        this.toDispose.push(
+             this.actionListener.handleVSCodeRequest(RequestExportSnapshotAction.KIND, async message => {
+                console.log('[RevisionManagementProvider] ExportSnapshot action received');
+                this.connector.sendActionToActiveClient(RequestExportSvgAction.create());
+                return { kind: 'noop' } as any;
+            })
+        );
+
         this.toDispose.push(this.actionCache);
     }
 
